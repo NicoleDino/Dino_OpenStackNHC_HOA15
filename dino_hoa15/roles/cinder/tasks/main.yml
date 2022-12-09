@@ -1,0 +1,58 @@
+---
+## CINDER ##
+
+  - name: Installing OpenStack Dashboard (Horizon) (Ubuntu)
+    apt:
+      name:
+        - cinder-api
+        - cinder-scheduler
+      state: latest
+      update_cache: yes
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Editing the cinder file (Ubuntu)
+    copy:
+      dest: /etc/nova/nova.conf
+      content: |
+        [database]
+        connection = mysql+pymysql://cinder:CINDER_DBPASS@controller/cinder
+
+        [DEFAULT]
+        transport_url = rabbit://openstack:RABBIT_PASS@controller
+
+        [DEFAULT]
+        auth_strategy = keystone
+
+        [keystone_authtoken]
+        www_authenticate_uri = http://controller:5000
+        auth_url = http://controller:5000
+        memcached_servers = controller:11211
+        auth_type = password
+        project_domain_id = default
+        user_domain_id = default
+        project_name = service
+        username = cinder
+        password = CINDER_PASS
+
+        [DEFAULT]
+        my_ip = 10.0.0.11
+
+        [oslo_concurrency]
+        lock_path = /var/lib/cinder/tmp
+        mode: 0755
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Editing the nova file (Ubuntu)
+    copy:
+      dest: /etc/nova/nova.conf
+      content: |
+        [cinder]
+        os_region_name = RegionOne
+        mode: 0755
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Starting the Compute API and Block storage services (Cinder) (Ubuntu)
+    shell: |
+      service nova-api start
+      service cinder-scheduler start
+    when: ansible_distribution == "Ubuntu"

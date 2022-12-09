@@ -1,0 +1,64 @@
+---
+## NEUTRON ##
+
+  - name: Installing Neutron (Ubuntu)
+    apt:
+      name: neutron-linuxbridge-agent
+      state: latest
+      update_cache: yes
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Editing the neutron file (Ubuntu)
+    copy:
+      dest: /etc/neutron/neutron.conf
+      content: |
+        [DEFAULT]
+        transport_url = rabbit://openstack:RABBIT_PASS@controller
+
+        [DEFAULT]
+        auth_strategy = keystone
+
+        [keystone_authtoken]
+        auth_uri = http://controller:5000
+        auth_url = http://controller:35357
+        memcached_servers = controller:11211
+        auth_type = password
+        project_domain_name = default
+        user_domain_name = default
+        project_name = service
+        username = neutron
+        password = NEUTRON_PASS
+
+        [oslo_concurrency]
+        lock_path = /var/lib/neutron/tmp
+        mode: 0755
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Editing the nova file (Ubuntu)
+    copy:
+      dest: /etc/nova/nova.conf
+      content: |
+        [neutron]
+        url = http://controller:9696
+        auth_url = http://controller:35357
+        auth_type = password
+        project_domain_name = default
+        user_domain_name = default
+        region_name = RegionOne
+        project_name = service
+        username = neutron
+        password = NEUTRON_PASS
+        mode: 0755
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Starting Nova-compute (Ubuntu)
+    systemd:
+      name: nova-compute
+      state: started
+    when: ansible_distribution == "Ubuntu"
+
+  - name: Starting Neutron Linux Bridge agent (Ubuntu)
+    systemd:
+      name: neutron-linuxbridge-agent
+      state: started
+    when: ansible_distribution == "Ubuntu"
